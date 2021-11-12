@@ -15,37 +15,47 @@ if (!empty($_POST['_token'])) {
         // $MC = imap_check($conn);
 
         /* Search Emails having the specified keyword in the email subject */
-        $mails = imap_search($conn, "ALL");
-        $subjects = array();
-        $messages = array();
-        $messageExcerpts = array();
-        $partialMessages = array();
-        $dates = array();
-        $result = array();
-        if (!empty($mails)) {
-            rsort($mails);
-            $i = 0;
-            foreach ($mails as $mail) {
-                if ($i > 20) {
-                    break;
-                }
-                $overview = imap_fetch_overview($conn, $mail, 0);
-                $date = date("d F, Y", strtotime($overview[0]->date));
+        $emails = imap_search($conn, 'FROM "*@gmail.com"');
+        /* if emails are returned, cycle through each... */
 
-                $message = imap_body($conn, $mail, 0);
+        $result = array();
+
+        if ($emails) {
+            /* begin output var */
+            $output = '';
+            /* put the newest emails on top */
+            rsort($emails);
+            /* for every email... */
+            $i = 0;
+            foreach ($emails as $email_number) {
+                /* get information specific to this email */
+                $overview = imap_fetch_overview($conn, $email_number, 0);
+                $message = imap_fetchbody($conn, $email_number, 2);
+                /* output the email header information */
+                $output .= '<div class="toggler ' . ($overview[0]->seen ? 'read' : 'unread') . '">';
+                $output .= '<span class="subject">' . $overview[0]->subject . '</span> ';
+                $output .= '<span class="from">' . $overview[0]->from . '</span>';
+                $output .= '<span class="date">on ' . $overview[0]->date . '</span>';
+                $output .= '</div>';
 
                 $result[$i] = array(
+                    'seen' => ($overview[0]->seen ? 'read' : 'unread'),
                     'subject' => $overview[0]->subject,
                     'from' => $overview[0]->from,
-                    'to' => $overview[0]->to,
-                    'date' => $date,
-                    'message' => $message
+                    'date' => $overview[0]->date,
+                    'message' => $message,
                 );
-                $i++;
-            } // End foreach
-        } // end if
+
+                /* output the email body */
+                $output .= '<div class="body">' . $message . '</div>';
+                if (++$i == 20) {
+                    break;
+                }
+            }
+            
+        }
         imap_close($conn);
     }
-    echo json_encode($message)."<br/>";
-    echo $result[0]['message'];
+    // echo json_encode($message)."<br/>";
+    header("Location: /",);
 }
